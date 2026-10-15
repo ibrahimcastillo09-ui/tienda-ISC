@@ -270,6 +270,7 @@
             font-weight: 700;
             margin-bottom: 15px;
             border-radius: 2px;
+            object-fit: cover;
         }
 
         .product-title {
@@ -378,7 +379,7 @@
             </div>
         </section>
 
-        <!-- PÁGINA 2 -->
+        <!-- PÁGINA 2: CATÁLOGO CARGADO DESDE FIRESTORE -->
         <section class="slide">
             <header class="header-mini">
                 <a href="#" onclick="scrollToPage(0)" class="logo-mini">ISC<span>.</span></a>
@@ -390,24 +391,10 @@
                 <p>EDICIÓN LIMITADA</p>
             </div>
 
-            <div class="products-grid">
+            <!-- Contenedor dinámico -->
+            <div class="products-grid" id="productos-container">
                 <div class="product-card">
-                    <div class="product-img">IMAGEN CAMISA 1</div>
-                    <h3 class="product-title">Camisa ISC Oversize</h3>
-                    <p class="product-price">$35.00</p>
-                    <button class="btn-add">Agregar al Carrito</button>
-                </div>
-                <div class="product-card">
-                    <div class="product-img">IMAGEN CAMISA 2</div>
-                    <h3 class="product-title">Camisa ISC Gothic Black</h3>
-                    <p class="product-price">$40.00</p>
-                    <button class="btn-add">Agregar al Carrito</button>
-                </div>
-                <div class="product-card">
-                    <div class="product-img">IMAGEN CAMISA 3</div>
-                    <h3 class="product-title">Camisa ISC White Essential</h3>
-                    <p class="product-price">$35.00</p>
-                    <button class="btn-add">Agregar al Carrito</button>
+                    <p style="padding: 40px; color: #777;">Cargando productos desde Firebase...</p>
                 </div>
             </div>
             <div></div>
@@ -478,12 +465,11 @@
         });
     </script>
 
-    <!-- INTEGRACIÓN DE FIREBASE (CONFIGURACIÓN) -->
+    <!-- INTEGRACIÓN DE FIREBASE Y FIRESTORE -->
     <script type="module">
-        // Importar las funciones necesarias de los SDKs de Firebase desde CDN
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        // Configuración de tu aplicación web en Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAUlZYlz6r9_veQvT89bc_WF8s0D_NGE2Y",
             authDomain: "isc-ef8b1.firebaseapp.com",
@@ -493,9 +479,40 @@
             appId: "1:1088109803526:web:48ae3149728be079586b87"
         };
 
-        // Inicializar Firebase
         const app = initializeApp(firebaseConfig);
-        console.log("Firebase inicializado con éxito para ISC.");
+        const db = getFirestore(app);
+
+        async function cargarProductos() {
+            const contenedor = document.getElementById('productos-container');
+            try {
+                const querySnapshot = await getDocs(collection(db, "productos"));
+                if (querySnapshot.empty) {
+                    contenedor.innerHTML = `<div class="product-card" style="grid-column: 1 / -1;"><p style="padding: 30px;">Aún no hay productos registrados en Firestore.</p></div>`;
+                    return;
+                }
+
+                let html = '';
+                querySnapshot.forEach((doc) => {
+                    const prod = doc.data();
+                    html += `
+                        <div class="product-card">
+                            <div class="product-img">
+                                ${prod.imagen ? `<img src="${prod.imagen}" alt="${prod.nombre}" style="width:100%; height:100%; object-fit:cover;">` : 'SIN IMAGEN'}
+                            </div>
+                            <h3 class="product-title">${prod.nombre || 'Producto ISC'}</h3>
+                            <p class="product-price">$${prod.precio ? Number(prod.precio).toFixed(2) : '0.00'}</p>
+                            <button class="btn-add">Agregar al Carrito</button>
+                        </div>
+                    `;
+                });
+                contenedor.innerHTML = html;
+            } catch (error) {
+                console.error("Error al cargar productos: ", error);
+                contenedor.innerHTML = `<div class="product-card" style="grid-column: 1 / -1;"><p style="padding: 30px; color: red;">Error al conectar con la base de datos.</p></div>`;
+            }
+        }
+
+        cargarProductos();
     </script>
 </body>
 </html>
